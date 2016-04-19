@@ -1,4 +1,6 @@
-﻿using System;
+﻿// Modified stuff
+
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -187,7 +189,7 @@ namespace LyricTools
                                     if (existingParagraph != null)
                                     {
                                         // Existing paragraph, get its ID and update the verse order
-                                        existingParagraph.ID = SongVerses.Parent.Elements("SongVerses").Where(sv => sv.Element(""))
+                                        //existingParagraph.ID = SongVerses.Parent.Elements("SongVerses").Where(sv => sv.Element(""))
                                         VerseOrder += existingParagraph.ID + " ";
                                     }
                                 } // if (not empty)
@@ -541,7 +543,7 @@ namespace LyricTools
                     default:
                     case "lyrix":
                         {
-                            if (String.IsNullOrWhiteSpace(LyrixSongVersesFile))
+                            if (SongVerses == null)
                                 song.ParseFromLyrix(File.ReadAllText(inputPath, Encoding.Default).Replace("\r\n", "\n"));
                             else
                             {
