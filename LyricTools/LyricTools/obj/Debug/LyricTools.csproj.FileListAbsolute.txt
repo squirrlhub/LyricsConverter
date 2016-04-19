@@ -1,0 +1,14 @@
+C:\Users\visse\documents\visual studio 2013\Projects\LyricTools\LyricTools\bin\Debug\LyricTools.exe.config
+C:\Users\visse\documents\visual studio 2013\Projects\LyricTools\LyricTools\bin\Debug\LyricTools.exe.manifest
+C:\Users\visse\documents\visual studio 2013\Projects\LyricTools\LyricTools\bin\Debug\LyricTools.application
+C:\Users\visse\documents\visual studio 2013\Projects\LyricTools\LyricTools\bin\Debug\LyricTools.exe
+C:\Users\visse\documents\visual studio 2013\Projects\LyricTools\LyricTools\bin\Debug\LyricTools.pdb
+C:\Users\visse\documents\visual studio 2013\Projects\LyricTools\LyricTools\obj\Debug\LyricTools.AdditionalOptions1.resources
+C:\Users\visse\documents\visual studio 2013\Projects\LyricTools\LyricTools\obj\Debug\LyricTools.Form1.resources
+C:\Users\visse\documents\visual studio 2013\Projects\LyricTools\LyricTools\obj\Debug\LyricTools.Properties.Resources.resources
+C:\Users\visse\documents\visual studio 2013\Projects\LyricTools\LyricTools\obj\Debug\LyricTools.csproj.GenerateResource.Cache
+C:\Users\visse\documents\visual studio 2013\Projects\LyricTools\LyricTools\obj\Debug\LyricTools.exe.manifest
+C:\Users\visse\documents\visual studio 2013\Projects\LyricTools\LyricTools\obj\Debug\LyricTools.application
+C:\Users\visse\documents\visual studio 2013\Projects\LyricTools\LyricTools\obj\Debug\LyricTools.exe
+C:\Users\visse\documents\visual studio 2013\Projects\LyricTools\LyricTools\obj\Debug\LyricTools.pdb
+C:\Users\visse\documents\visual studio 2013\Projects\LyricTools\LyricTools\obj\Debug\LyricTools.csprojResolveAssemblyReference.cache
