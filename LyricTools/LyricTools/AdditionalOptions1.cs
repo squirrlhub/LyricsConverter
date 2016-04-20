@@ -16,6 +16,10 @@ namespace LyricTools
         {
             Program.additionalOptions1 = this;
             InitializeComponent();
+
+#if DEBUG
+            Program.form1.SongVersesFileLocation = @"C:\Users\ICD\Desktop\new\LyricTools\data\SongsWithVerses.xml";
+#endif
         }
 
         private void button2_Click(object sender, EventArgs e)

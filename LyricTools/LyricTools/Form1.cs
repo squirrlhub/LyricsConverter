@@ -112,19 +112,9 @@ namespace LyricTools
             destFileTypeCombo.SelectedIndex = 0;
 
 #if DEBUG
-            inputFiles = new[] { @"C:\Users\visse\Desktop\ZEH002.TXT" };
-            outputFolder = @"C:\Users\visse\Desktop";
+            inputFiles = new[] { @"C:\Users\ICD\Desktop\new\LyricTools\data\in\BLESSED.TXT" };
+            outputFolder = @"C:\Users\ICD\Desktop\new\LyricTools\data\out";
 #endif
-        }
-
-        private void inputTextbox_TextChanged(object sender, EventArgs e)
-        {
-
-        }
-
-        private void label1_Click(object sender, EventArgs e)
-        {
-
         }
     }
 }

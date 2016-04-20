@@ -63,7 +63,6 @@
             this.label1.Size = new System.Drawing.Size(31, 13);
             this.label1.TabIndex = 1;
             this.label1.Text = "Input";
-            this.label1.Click += new System.EventHandler(this.label1_Click);
             // 
             // label2
             // 
@@ -86,7 +85,6 @@
             this.inputTextbox.Size = new System.Drawing.Size(381, 20);
             this.inputTextbox.TabIndex = 99;
             this.inputTextbox.Text = "[Choose input files]";
-            this.inputTextbox.TextChanged += new System.EventHandler(this.inputTextbox_TextChanged);
             // 
             // outputTextbox
             // 

@@ -1,6 +1,4 @@
-﻿// Modified stuff
-// Second modification
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -16,11 +14,12 @@ namespace LyricTools
     {
         public XElement SongVerses;
 
-        enum ParagraphType {
+        enum ParagraphType
+        {
             /// <summary>
             /// Verse
             /// </summary>
-            v=1,
+            v = 1,
             /// <summary>
             /// Chorus
             /// </summary>
@@ -28,7 +27,15 @@ namespace LyricTools
             /// <summary>
             /// Bridge
             /// </summary>
-            b
+            b,
+            /// <summary>
+            /// Intro
+            /// </summary>
+            i,
+            /// <summary>
+            /// Ending
+            /// </summary>
+            e
         }
         class Paragraph
         {
@@ -55,7 +62,7 @@ namespace LyricTools
 
         class Song
         {
-            public string ID, Title, Copyright, VerseOrder = "";
+            public string ID = "", Title = "", Copyright = "", VerseOrder = "";
             public string[] RawParagraphs, Authors;
             public List<Paragraph> Verses = new List<Paragraph>();
             public List<Paragraph> Choruses = new List<Paragraph>();
@@ -67,11 +74,15 @@ namespace LyricTools
             /// </summary>
             public List<Paragraph> OutputParagraphs = new List<Paragraph>();
 
+            /// <summary>
+            /// XML description of this song, exported from Lyrix's LXDATA database
+            /// (which can be given a .mbd extension, then opened in Microsoft Access. Export the Songs table as XML, also include SongVerses.)
+            /// </summary>
+            XElement SongData;
+
             public void ParseFromLyrixUsingSongVersesFile(string sourcetext)
             {
                 RawParagraphs = sourcetext.Split(new[] { "\n\n" }, StringSplitOptions.None);
-                
-                // Only use the OutputParagraphs List - everything is already indexed!
 
                 // Get ID and Title:
                     try
@@ -92,6 +103,18 @@ namespace LyricTools
                                 break;
                             }
                         }
+
+                        // Find the song in SongVerses:
+                        string lowercaseID = ID.ToLowerInvariant();
+                        // First try ID:
+                        SongData = Program.conversionTools.SongVerses.Elements("Songs").Where(s => s.Element("SongID").Value.Trim().ToLowerInvariant() == lowercaseID).First();
+                        if (SongData == null)
+                        {//Otherwise just try the title
+                            string lowercaseName = Title.ToLowerInvariant();
+                            SongData = Program.conversionTools.SongVerses.Elements("Songs").Where(s => s.Element("Name").Value.Trim().ToLowerInvariant() == lowercaseName).First();
+                        }
+                        if (SongData == null)
+                            throw new Exception("Song not found in Lyrix database: " + ID);
                     }
                     catch (Exception e)
                     {
@@ -107,7 +130,7 @@ namespace LyricTools
                             {
                                 //Do nothing
                             }
-                            if (Regex.IsMatch(RawParagraphs[i], @"^\d. ")) // if the paragraph starts with a number, then a dot, then a space...
+                            else if (Regex.IsMatch(RawParagraphs[i], @"^\d. ")) // if the paragraph starts with a number, then a dot, then a space...
                             {
                                 //...then this is a verse.
                                 //Get the verse number:
@@ -169,75 +192,87 @@ namespace LyricTools
                                 p.Type = ParagraphType.c;
                                 p.Text = RawParagraphs[i];
 
-                                /*
-                                 * 0: Intro
-                                 * 1: Verse
-                                 * 2: Bridge
-                                 * 3: Chorus
-                                 * 4: Ending
-                                 * 
-                                 * 5: Page
-                                 * 6: Slide
-                                 * */
-
-                                string searchText = p.Text.Replace("\n", "; ");
-
                                 if (!String.IsNullOrWhiteSpace(p.Text)) // Ignore if empty
                                 {
-                                    //First, check if this is a re-occurring paragraph:
-                                    Paragraph existingParagraph = OutputParagraphs.SingleOrDefault(o => o.Text.Equals(p.Text, StringComparison.Ordinal));
-                                    if (existingParagraph != null)
+                                    string searchText = p.Text.Replace("\n", " "); // the text to search for doesn't have newlines
+                                    XElement foundVerse = SongData.Elements("SongVerses").Where(sv => sv.Element("PartText").Value == searchText).FirstOrDefault();
+                                    if (foundVerse == null)
                                     {
-                                        // Existing paragraph, get its ID and update the verse order
-                                        //existingParagraph.ID = SongVerses.Parent.Elements("SongVerses").Where(sv => sv.Element(""))
-                                        VerseOrder += existingParagraph.ID + " ";
+                                        searchText = searchText.ToLowerInvariant();
+                                        foundVerse = SongData.Elements("SongVerses").Where(sv => sv.Element("PartText").Value.ToLowerInvariant() == searchText).FirstOrDefault();
                                     }
-                                } // if (not empty)
 
-                                //{
-                                //    //Compare text to existing choruses to determine if this is a new chorus
-                                //    Paragraph existingChorus = Choruses.SingleOrDefault(c => c.Text.Equals(p.Text, StringComparison.Ordinal));
-                                //    if (existingChorus != null)
-                                //    {
-                                //        // Existing chorus, get its ID and update the verse order
-                                //        VerseOrder += existingChorus.ID + " ";
-                                //    }
-                                //    else
-                                //    {
-                                //        //Not an existing chorus. Check if existing bridge
-                                //        Paragraph existingBridge = Bridges.SingleOrDefault(b => b.Text.Equals(p.Text, StringComparison.Ordinal));
-                                //        if (existingBridge != null)
-                                //        {
-                                //            //Existing bridge, get its ID and update the verse order
-                                //            VerseOrder += existingBridge.ID + " ";
-                                //        }
-                                //        else
-                                //        {
-                                //            //Not an existing bridge either.
+                                    if (foundVerse != null)
+                                    {
+                                        // Get verse type:
+                                        switch (foundVerse.Element("PartID").Value)
+                                        {
+                                            /*
+                                             * 0: Intro 
+                                             * 1: Verse
+                                             * 2: Bridge
+                                             * 3: Chorus
+                                             * 4: Ending
+                                             * 
+                                             * (5: Page)
+                                             * (6: Slide)
+                                             * */
+                                            case "0":
+                                                p.Type = ParagraphType.i;
+                                                p.ID = "i";
+                                                break;
 
-                                //            // TODO: Add code to distinguish better between choruses, pre-choruses and bridges
+                                            case "1":
+                                                p.Type = ParagraphType.v;
+                                                p.ID = "v";
+                                                break;
 
-                                //            // Add as new chorus
-                                //            p.Number = Choruses.Count + 1;
-                                //            p.ID = "c" + p.Number;
+                                            case "2":
+                                                p.Type = ParagraphType.b;
+                                                p.ID = "b";
+                                                break;
 
-                                //            Choruses.Add(p);
-                                //            OutputParagraphs.Add(p);
+                                            default:
+                                            case "3":
+                                                p.Type = ParagraphType.c;
+                                                p.ID = "c";
+                                                break;
 
-                                //            VerseOrder += p.ID + " ";
-                                //        }
-                                //    }
-                                //        }
-                                //    }
-                                //}
-                                //catch (Exception e2)
-                                //{
-                                //    Console.WriteLine("Exception caught while trying to decode paragraph "+i+" of this song: "+sourcetext+"\n\nThe exception was: "+e2.ToString());
-                                //}
+                                            case "4":
+                                                p.Type = ParagraphType.e;
+                                                p.ID = "e";
+                                                break;
+                                        }
+                                        // Get verse number:
+                                        p.Number = Int16.Parse(foundVerse.Element("PartNumber").Value);
+                                        p.ID += p.Number;
+                                    
+                                        //First, check if this is a re-occurring paragraph:
+                                        Paragraph existingParagraph = OutputParagraphs.SingleOrDefault(o => o.Text.Equals(p.Text, StringComparison.Ordinal));
+                                        if (existingParagraph != null)
+                                        {
+                                            // Existing paragraph, get its ID and update the verse order
+                                            //existingParagraph.ID = SongVerses.Parent.Elements("SongVerses").Where(sv => sv.Element(""))
+                                            VerseOrder += existingParagraph.ID + " ";
+                                        }
+                                        else
+                                        {
+                                            // Add as new paragraph and update the verse order
+                                            OutputParagraphs.Add(p);
+                                            VerseOrder += p.ID + " ";
+                                        }
+                                    } // if (not empty)
+                                } // if (found)
+                                else
+                                {
+                                    if (!String.IsNullOrWhiteSpace(p.Text))
+                                        Console.WriteLine(">>Couldn't find verse in song \""+Title+"\" ("+ID+"):\n"+p.Text);
+                                }
                             } // if (not verse)
                         }
                         catch (Exception e)
                         {
+                            Console.WriteLine("Exception caught: "+e.ToString());
                             throw e;
                         }
                     } // paragraph-for
@@ -395,56 +430,6 @@ namespace LyricTools
                 }
             }
 
-            //public XElement ToOpenLyricsXML()
-            //{
-            //    // First create the authors element, then just add it later
-            //    XElement authors = new XElement("authors");
-            //    if (Authors != null)
-            //    {
-            //        foreach (string Author in Authors)
-            //        {
-            //            authors.Add(new XElement("author", Author));
-            //        }
-            //    }
-
-            //    // Next, create the lyrics element, add it later
-            //    XElement lyrics = new XElement("lyrics");
-            //    foreach (Paragraph p in OutputParagraphs)
-            //    {
-            //        string text = p.Text.Replace("\n", "<br />");
-            //        XElement lines = new XElement("lines");
-            //        lines.SetValue(lines);
-                    
-            //        lyrics.Add(new XElement("verse", 
-            //            new XAttribute("name", p.ID),
-            //            lines
-            //            ));
-            //    }
-
-            //    // Create the root xml element and populate its fields
-            //    XElement xml = new XElement("song", 
-            //    //new XAttribute("xmlns", "http://openlyrics.info/namespace/2009/song"), 
-            //    new XAttribute("version", "0.8"),
-            //    new XAttribute("createdIn", "OpenLP 2.4"),
-            //    new XAttribute("modifiedIn", "OpenLP 2.4"),
-            //    new XAttribute("modifiedDate", "2016-01-01T12:00:00"), //TODO:use real date
-
-            //    new XElement("properties",
-            //        new XElement("titles",
-            //            new XElement("title"), Title
-            //        ),
-            //        new XElement("copyright", Copyright),
-            //        new XElement("verseOrder", VerseOrder.Trim()),
-            //        new XElement("ccliNo", ID),
-            //        authors
-            //        ),
-
-            //    lyrics
-            //    );
-
-            //    return xml;
-            //}
-
             public void WriteOpenLyricsXML(string path)
             {
                 try
@@ -466,6 +451,9 @@ namespace LyricTools
                     w.WriteStartElement("title");
                     w.WriteString(Title);
                     w.WriteEndElement();
+                    w.WriteStartElement("title"); //Use the Lyrix ID field as the Alternative Title field here
+                    w.WriteString(ID);
+                    w.WriteEndElement();
                     w.WriteEndElement();
 
                     //w.WriteStartElement("comments");
@@ -482,9 +470,9 @@ namespace LyricTools
                     w.WriteString(VerseOrder.Trim());
                     w.WriteEndElement();
 
-                    w.WriteStartElement("ccliNo");
-                    w.WriteString(ID);
-                    w.WriteEndElement();
+                    //w.WriteStartElement("ccliNo");
+                    //
+                    //w.WriteEndElement();
 
                     w.WriteStartElement("authors");
                     if (Authors == null)
@@ -520,7 +508,6 @@ namespace LyricTools
                     }
                     w.WriteEndElement();
 
-                    //w.WriteRaw("\r\n</song>");
                     w.WriteEndElement(); //song
                     w.WriteEndDocument();
                     w.Close();
