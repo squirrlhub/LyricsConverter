@@ -12,3 +12,17 @@ C:\Users\visse\documents\visual studio 2013\Projects\LyricTools\LyricTools\obj\R
 C:\Users\visse\documents\visual studio 2013\Projects\LyricTools\LyricTools\obj\Release\LyricTools.pdb
 C:\Users\visse\documents\visual studio 2013\Projects\LyricTools\LyricTools\obj\Release\LyricTools.csprojResolveAssemblyReference.cache
 C:\Users\visse\documents\visual studio 2013\Projects\LyricTools\LyricTools\obj\Release\LyricTools.AdditionalOptions1.resources
+C:\Users\ICD\Documents\git_test_repo\LyricsConverter\Repo1\LyricTools\LyricTools\bin\Release\LyricTools.exe.config
+C:\Users\ICD\Documents\git_test_repo\LyricsConverter\Repo1\LyricTools\LyricTools\obj\Release\LyricTools.exe
+C:\Users\ICD\Documents\git_test_repo\LyricsConverter\Repo1\LyricTools\LyricTools\obj\Release\LyricTools.pdb
+C:\Users\ICD\Documents\git_test_repo\LyricsConverter\Repo1\LyricTools\LyricTools\bin\Release\LyricTools.exe.manifest
+C:\Users\ICD\Documents\git_test_repo\LyricsConverter\Repo1\LyricTools\LyricTools\bin\Release\LyricTools.application
+C:\Users\ICD\Documents\git_test_repo\LyricsConverter\Repo1\LyricTools\LyricTools\bin\Release\LyricTools.exe
+C:\Users\ICD\Documents\git_test_repo\LyricsConverter\Repo1\LyricTools\LyricTools\bin\Release\LyricTools.pdb
+C:\Users\ICD\Documents\git_test_repo\LyricsConverter\Repo1\LyricTools\LyricTools\obj\Release\LyricTools.csprojResolveAssemblyReference.cache
+C:\Users\ICD\Documents\git_test_repo\LyricsConverter\Repo1\LyricTools\LyricTools\obj\Release\LyricTools.AdditionalOptions1.resources
+C:\Users\ICD\Documents\git_test_repo\LyricsConverter\Repo1\LyricTools\LyricTools\obj\Release\LyricTools.Form1.resources
+C:\Users\ICD\Documents\git_test_repo\LyricsConverter\Repo1\LyricTools\LyricTools\obj\Release\LyricTools.Properties.Resources.resources
+C:\Users\ICD\Documents\git_test_repo\LyricsConverter\Repo1\LyricTools\LyricTools\obj\Release\LyricTools.csproj.GenerateResource.Cache
+C:\Users\ICD\Documents\git_test_repo\LyricsConverter\Repo1\LyricTools\LyricTools\obj\Release\LyricTools.exe.manifest
+C:\Users\ICD\Documents\git_test_repo\LyricsConverter\Repo1\LyricTools\LyricTools\obj\Release\LyricTools.application

@@ -28,7 +28,7 @@ namespace LyricTools
             openFileDialog1.Multiselect = false;
             openFileDialog1.Title = "Choose input file";
             openFileDialog1.ReadOnlyChecked = true;
-            openFileDialog1.Filter = "Exported Lyrix SongVerses file (*.xml) | *.xml; *.*";
+            openFileDialog1.Filter = "Exported Lyrix Songs file (*.xml) | *.xml; *.*";
             DialogResult result = openFileDialog1.ShowDialog(); // Show the dialog.
             if (result == DialogResult.OK) // Test result.
             {

@@ -119,7 +119,17 @@
   </resheader>
   <data name="label3.Text" xml:space="preserve">
     <value>Optional:
-Supply a SongVerses xml file, which will allow the program to look up what verse type each paragraph is.
+Supply a Songs.xml file, which will allow the program to look up what verse type each paragraph is.
 Without this file, there's no way to distinguish between choruses, bridges, intros and endings.</value>
+  </data>
+  <data name="label2.Text" xml:space="preserve">
+    <value>How do you get this file?
+1. Perform a database backup/export from Lyrix, then find the file "LyriXMain.LXdata"
+2. Rename this file to have a ".mdb" extension and open it in Microsoft Access
+    (If you've forgotten your password, Google how to get a password from an mdb file)
+4. Right click on the Songs table-&gt;Export-&gt;XML File
+5. Untick "...XSD", click "More Options..."
+6. Tick only "Songs" and "SongVerses"
+7. Click "OK" and export the song data</value>
   </data>
 </root>
