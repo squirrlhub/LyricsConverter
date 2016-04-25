@@ -112,7 +112,7 @@ namespace LyricTools
             destFileTypeCombo.SelectedIndex = 0;
 
 #if DEBUG
-            inputFiles = new[] { @"C:\Users\ICD\Desktop\new\LyricTools\data\in\BLESSED.TXT" };
+            inputFiles = new[] { @"C:\Users\ICD\Desktop\new\LyricTools\data\in\KRA001.TXT" };
             outputFolder = @"C:\Users\ICD\Desktop\new\LyricTools\data\out";
 #endif
         }

@@ -198,8 +198,24 @@ namespace LyricTools
                                     XElement foundVerse = SongData.Elements("SongVerses").Where(sv => sv.Element("PartText").Value == searchText).FirstOrDefault();
                                     if (foundVerse == null)
                                     {
+                                        //TODO! Use regex to search and bypass excess whitespace between words!
                                         searchText = searchText.ToLowerInvariant();
-                                        foundVerse = SongData.Elements("SongVerses").Where(sv => sv.Element("PartText").Value.ToLowerInvariant() == searchText).FirstOrDefault();
+                                        var foundVerseList = SongData.Elements("SongVerses").Where(sv => sv.Element("PartText").Value.ToLowerInvariant().Contains(searchText));
+                                        if (foundVerseList.Count() == 1)
+                                            foundVerse = foundVerseList.FirstOrDefault();
+                                        else if (foundVerseList.Count() > 0)
+                                        {
+                                            Console.WriteLine("Multiple possible verses for song found");
+                                            foundVerse = foundVerseList.FirstOrDefault();
+                                        }
+                                        else
+                                        {
+                                            Console.WriteLine("Verse type not found, assuming chorus");
+
+                                            // Add as new paragraph as chorus and update the verse order
+                                            OutputParagraphs.Add(p);
+                                            VerseOrder += p.ID + " ";
+                                        }
                                     }
 
                                     if (foundVerse != null)
