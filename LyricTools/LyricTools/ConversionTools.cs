@@ -79,6 +79,12 @@ namespace LyricTools
             /// (which can be given a .mbd extension, then opened in Microsoft Access. Export the Songs table as XML, also include SongVerses.)
             /// </summary>
             XElement SongData;
+            /// <summary>
+            /// Not initialised the same as SongData, so might be null.
+            /// Holds a "simplified" version of SongData - i.e. -  all verses are lowercase and have been trimmed, etc
+            /// The idea is to initialise this if a verse wasn't found in SongData
+            /// </summary>
+            XElement SongDataSimplified;
 
             public void ParseFromLyrixUsingSongVersesFile(string sourcetext)
             {
@@ -130,7 +136,7 @@ namespace LyricTools
                             {
                                 //Do nothing
                             }
-                            else if (Regex.IsMatch(RawParagraphs[i], @"^\d. ")) // if the paragraph starts with a number, then a dot, then a space...
+                            else if (Regex.IsMatch(RawParagraphs[i], @"^\d+. ")) // if the paragraph starts with a number, then a dot, then a space...
                             {
                                 //...then this is a verse.
                                 //Get the verse number:
@@ -158,7 +164,10 @@ namespace LyricTools
                             }
                             else if (RawParagraphs[i].StartsWith("Words/Music: ")
                                 || RawParagraphs[i].StartsWith("(c)")
-                                || RawParagraphs[i].StartsWith("(Alternatiewe harmonisasie: "))
+                                || RawParagraphs[i].StartsWith("(Alternatiewe harmonisasie")
+                                || RawParagraphs[i].StartsWith("(alternatiewe harmonisasie")
+                                || RawParagraphs[i].StartsWith("(Harmonisasie")
+                                || RawParagraphs[i].StartsWith("(harmonisasie"))
                             {
                                 //If the paragraph contains additional info, first split it into lines and process each of them:
                                 string[] lines = RawParagraphs[i].Split('\n');
@@ -172,7 +181,7 @@ namespace LyricTools
                                     {
                                         Copyright = line.Trim();
                                     }
-                                    else if (line.StartsWith("(Alternatiewe harmonisasie: "))
+                                    else// if (line.StartsWith("(Alternatiewe harmonisasie") || line.StartsWith("(alternatiewe harmonisasie"))
                                     {
                                         // Add this as as Other verse
                                         Paragraph Other1 = new Paragraph();
@@ -198,9 +207,21 @@ namespace LyricTools
                                     XElement foundVerse = SongData.Elements("SongVerses").Where(sv => sv.Element("PartText").Value == searchText).FirstOrDefault();
                                     if (foundVerse == null)
                                     {
-                                        //TODO! Use regex to search and bypass excess whitespace between words!
-                                        searchText = searchText.ToLowerInvariant();
-                                        var foundVerseList = SongData.Elements("SongVerses").Where(sv => sv.Element("PartText").Value.ToLowerInvariant().Contains(searchText));
+                                        //Use/create the simplified version of SongData
+                                        if (SongDataSimplified == null)
+                                        {
+                                            SongDataSimplified = new XElement(SongData); // deep copy!
+                                            foreach (var verse in SongDataSimplified.Elements("SongVerses"))
+                                            {
+                                                string newText = verse.Element("PartText").Value.Trim().ToLowerInvariant(); // Convert to lowercase and trim
+                                                newText = Regex.Replace(newText, @"\s+", " "); // Replace multiple spaces with just one
+                                                verse.Element("PartText").SetValue(newText);
+                                            }
+                                        }
+                                        searchText = searchText.Trim().ToLowerInvariant(); // Convert to lowercase and trim
+                                        searchText = Regex.Replace(searchText, @"\s+", " "); // Replace multiple spaces with just one
+                                        
+                                        var foundVerseList = SongDataSimplified.Elements("SongVerses").Where(sv => sv.Element("PartText").Value == searchText);
                                         if (foundVerseList.Count() == 1)
                                             foundVerse = foundVerseList.FirstOrDefault();
                                         else if (foundVerseList.Count() > 0)
@@ -210,7 +231,7 @@ namespace LyricTools
                                         }
                                         else
                                         {
-                                            Console.WriteLine("Verse type not found, assuming chorus");
+                                            Console.WriteLine(">> Verse type not found, assuming chorus: " + p.Text);
 
                                             // Add as new paragraph as chorus and update the verse order
                                             OutputParagraphs.Add(p);
