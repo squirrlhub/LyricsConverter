@@ -46,7 +46,7 @@ namespace LyricTools
             public string UppercaseText;
             public ParagraphType Type;
             /// <summary>
-            /// Number of Type. Ex - Chorus [1] or Verse [5].
+            /// Number of Type. Ex - Chorus [1] or Verse [5]. Note: Might not be assigned!
             /// </summary>
             public int Number;
             /// <summary>
@@ -89,230 +89,294 @@ namespace LyricTools
             public void ParseFromLyrixUsingSongVersesFile(string sourcetext)
             {
                 RawParagraphs = sourcetext.Split(new[] { "\n\n" }, StringSplitOptions.None);
+                List<Paragraph> unassignedChoruses = new List<Paragraph>();
 
                 // Get ID and Title:
+                try
+                {
+                    string[] firstLines = RawParagraphs[0].Split('\n');
+                    for (int i = 0; i < firstLines.Length; i++)
+                    {
+                        if (firstLines[i].StartsWith("--")) // Find the first line of dashes
+                        {
+                            // Set song ID to the next line's text
+                            ID = firstLines[i + 1];
+
+                            // If there is another line, set the song's title to that
+                            if (!string.IsNullOrWhiteSpace(firstLines[i + 2]))
+                                Title = firstLines[i + 2];
+                            else
+                                Title = "";
+                            break;
+                        }
+                    }
+
+                    // Find the song in SongVerses:
+                    string lowercaseID = ID.ToLowerInvariant();
+                    // First try ID:
+                    SongData = Program.conversionTools.SongVerses.Elements("Songs").Where(s => s.Element("SongID").Value.Trim().ToLowerInvariant() == lowercaseID).First();
+                    if (SongData == null)
+                    {//Otherwise just try the title
+                        string lowercaseName = Title.ToLowerInvariant();
+                        SongData = Program.conversionTools.SongVerses.Elements("Songs").Where(s => s.Element("Name").Value.Trim().ToLowerInvariant() == lowercaseName).First();
+                    }
+                    if (SongData == null)
+                        throw new Exception("Song not found in Lyrix database: " + ID);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("Exception caught while trying to get song ID and name: " + e.ToString());
+                }
+
+                // Decode the lyrics:
+                for (int i = 1; i < RawParagraphs.Length; i++) // iterate through the rest of the paragraphs
+                {
                     try
                     {
-                        string[] firstLines = RawParagraphs[0].Split('\n');
-                        for (int i = 0; i < firstLines.Length; i++)
+                        if (String.IsNullOrWhiteSpace(RawParagraphs[i]))
                         {
-                            if (firstLines[i].StartsWith("--")) // Find the first line of dashes
-                            {
-                                // Set song ID to the next line's text
-                                ID = firstLines[i + 1];
+                            //Do nothing
+                        }
+                        else if (Regex.IsMatch(RawParagraphs[i], @"^\d+. ")) // if the paragraph starts with a number, then a dot, then a space...
+                        {
+                            //...then this is a verse.
+                            //Get the verse number:
+                            int versenum = 9; // default in case of an error
+                            int indexOfFirstSpace = RawParagraphs[i].IndexOf(' ');
+                            int.TryParse(RawParagraphs[i].Substring(0, indexOfFirstSpace - 1), out versenum);
 
-                                // If there is another line, set the song's title to that
-                                if (!string.IsNullOrWhiteSpace(firstLines[i + 2]))
-                                    Title = firstLines[i + 2];
-                                else
-                                    Title = "";
-                                break;
+                            Paragraph p = new Paragraph();
+                            p.Type = ParagraphType.v;
+                            p.Text = RawParagraphs[i].Substring(indexOfFirstSpace + 1);
+                            if (!String.IsNullOrWhiteSpace(p.Text)) // Ignore if empty
+                            {
+                                p.Number = versenum;
+                                p.ID = "v" + versenum;
+
+                                //Only add if this to the verse list is the first occurrence
+                                if (!OutputParagraphs.Any(v => v.Text.Equals(p.Text, StringComparison.Ordinal)))
+                                {
+                                    OutputParagraphs.Add(p);
+                                }
+
+                                //Either way, update the verse order
+                                VerseOrder += p.ID + " ";
                             }
                         }
-
-                        // Find the song in SongVerses:
-                        string lowercaseID = ID.ToLowerInvariant();
-                        // First try ID:
-                        SongData = Program.conversionTools.SongVerses.Elements("Songs").Where(s => s.Element("SongID").Value.Trim().ToLowerInvariant() == lowercaseID).First();
-                        if (SongData == null)
-                        {//Otherwise just try the title
-                            string lowercaseName = Title.ToLowerInvariant();
-                            SongData = Program.conversionTools.SongVerses.Elements("Songs").Where(s => s.Element("Name").Value.Trim().ToLowerInvariant() == lowercaseName).First();
+                        else if (RawParagraphs[i].StartsWith("Words/Music: ")
+                            || RawParagraphs[i].StartsWith("(c)")
+                            || RawParagraphs[i].StartsWith("(Alternatiewe ")
+                            || RawParagraphs[i].StartsWith("(alternatiewe ")
+                            || RawParagraphs[i].StartsWith("(Harmonisasie")
+                            || RawParagraphs[i].StartsWith("(harmonisasie"))
+                        {
+                            //If the paragraph contains additional info, first split it into lines and process each of them:
+                            string[] lines = RawParagraphs[i].Split('\n');
+                            foreach (string line in lines)
+                            {
+                                if (line.StartsWith("Words/Music: "))
+                                {
+                                    Authors = line.Substring(line.IndexOf(": ") + 2).Split(new[] { ", " }, StringSplitOptions.None);
+                                }
+                                else if (line.StartsWith("(c)"))
+                                {
+                                    Copyright = line.Trim();
+                                }
+                                else
+                                {
+                                    // Add this as as Other verse
+                                    Paragraph Other1 = new Paragraph();
+                                    Other1.ID = "o1";
+                                    Other1.Text = line;
+                                    OutputParagraphs.Add(Other1);
+                                    // ...but don't add it to the verseOrder. Thus, this isn't displayed by default.
+                                }
+                            }
                         }
-                        if (SongData == null)
-                            throw new Exception("Song not found in Lyrix database: " + ID);
+                        else
+                        {
+                            //Either chorus or bridge.
+
+                            //First, assume new Chorus:
+                            Paragraph p = new Paragraph();
+                            p.Type = ParagraphType.c;
+                            p.Text = RawParagraphs[i];
+
+                            if (!String.IsNullOrWhiteSpace(p.Text)) // Ignore if empty
+                            {
+                                string searchText = p.Text.Replace("\n", " "); // the text to search for doesn't have newlines
+                                XElement foundVerse = SongData.Elements("SongVerses").Where(sv => sv.Element("PartText").Value == searchText).FirstOrDefault();
+                                if (foundVerse == null)
+                                {
+                                    //Use/create the simplified version of SongData
+                                    if (SongDataSimplified == null)
+                                    {
+                                        SongDataSimplified = new XElement(SongData); // deep copy!
+                                        foreach (var verse in SongDataSimplified.Elements("SongVerses"))
+                                        {
+                                            string newText = verse.Element("PartText").Value.Trim().ToLowerInvariant().Replace("‘", @"'"); // Convert to lowercase, trim, replace wrong apostrophes
+                                            newText = Regex.Replace(newText, @"[ ]{2,}", " "); // Replace multiple spaces with just one
+                                            verse.Element("PartText").SetValue(newText);
+                                        }
+                                    }
+                                    searchText = searchText.Trim().ToLowerInvariant().Replace("‘", @"'"); // Convert to lowercase and trim
+                                    searchText = Regex.Replace(searchText, @"[ ]{2,}", " "); // Replace multiple spaces with just one
+                                        
+                                    var foundVerseList = SongDataSimplified.Elements("SongVerses").Where(sv => sv.Element("PartText").Value == searchText);
+                                    if (foundVerseList.Count() == 1)
+                                        foundVerse = foundVerseList.FirstOrDefault();
+                                    else if (foundVerseList.Count() > 0)
+                                    {
+                                        Console.WriteLine("Multiple possible verses for song found");
+                                        foundVerse = foundVerseList.FirstOrDefault();
+                                    }
+                                    else
+                                    {
+                                        Console.WriteLine(">> Verse type not found, assuming chorus: " + Title + ": " + p.Text);
+
+                                        //Add this to the list of unsorted choruses, which will be checked after all "fixed" choruses have been added
+                                        Paragraph existingUnassignedChorus = unassignedChoruses.SingleOrDefault(c => c.Text.Equals(p.Text, StringComparison.Ordinal));
+                                        if (existingUnassignedChorus != null)
+                                        {
+                                            // Existing chorus, get its ID and update the verse order
+                                            VerseOrder += existingUnassignedChorus.ID + " ";
+                                        }
+                                        else
+                                        {
+                                            // Non-existing chorus, add it and update the verse order
+                                            p.ID = "TEMP" + (unassignedChoruses.Count() + 1);
+                                            unassignedChoruses.Add(p);
+                                            OutputParagraphs.Add(p); // Should this happen here or rather later?
+                                            VerseOrder += p.ID + " ";
+                                        }
+                                    }
+                                }
+
+                                if (foundVerse != null)
+                                {
+                                    // Get verse type:
+                                    switch (foundVerse.Element("PartID").Value)
+                                    {
+                                        /*
+                                            * 0: Intro 
+                                            * 1: Verse
+                                            * 2: Bridge
+                                            * 3: Chorus
+                                            * 4: Ending
+                                            * 
+                                            * (5: Page)
+                                            * (6: Slide)
+                                            * */
+                                        case "0":
+                                            p.Type = ParagraphType.i;
+                                            p.ID = "i";
+                                            break;
+
+                                        case "1":
+                                            p.Type = ParagraphType.v;
+                                            p.ID = "v";
+                                            break;
+
+                                        case "2":
+                                            p.Type = ParagraphType.b;
+                                            p.ID = "b";
+                                            break;
+
+                                        default:
+                                        case "3":
+                                            p.Type = ParagraphType.c;
+                                            p.ID = "c";
+                                            break;
+
+                                        case "4":
+                                            p.Type = ParagraphType.e;
+                                            p.ID = "e";
+                                            break;
+                                    }
+                                    // Get verse number:
+                                    p.Number = Int16.Parse(foundVerse.Element("PartNumber").Value);
+                                    p.ID += p.Number;
+                                    
+                                    //First, check if this is a re-occurring paragraph:
+                                    Paragraph existingParagraph = OutputParagraphs.SingleOrDefault(o => o.Text.Equals(p.Text, StringComparison.Ordinal));
+                                    if (existingParagraph != null)
+                                    {
+                                        // Existing paragraph, get its ID and update the verse order
+                                        //existingParagraph.ID = SongVerses.Parent.Elements("SongVerses").Where(sv => sv.Element(""))
+                                        VerseOrder += existingParagraph.ID + " ";
+                                    }
+                                    else
+                                    {
+                                        // Add as new paragraph and update the verse order
+                                        OutputParagraphs.Add(p);
+                                        VerseOrder += p.ID + " ";
+                                    }
+                                } // if (not empty)
+                            } // if (found)
+                            else
+                            {
+                                if (!String.IsNullOrWhiteSpace(p.Text))
+                                    Console.WriteLine(">>Couldn't find verse in song \""+Title+"\" ("+ID+"):\n"+p.Text);
+                            }
+                        } // if (not verse)
                     }
                     catch (Exception e)
                     {
-                        Console.WriteLine("Exception caught while trying to get song ID and name: " + e.ToString());
+                        Console.WriteLine("Exception caught: "+e.ToString());
+                        throw e;
                     }
+                } // paragraph-for
 
-                    // Decode the lyrics:
-                    for (int i = 1; i < RawParagraphs.Length; i++) // iterate through the rest of the paragraphs
+                // Assign all unassigned choruses (if any), i.e., assign them valid IDs
+                if (unassignedChoruses.Any())
+                {
+                    
+                    // First, find the highest chorus number in OutputParagraphs
+                    var list1 = OutputParagraphs.Where(p => p.Type == ParagraphType.c && !p.ID.StartsWith("TEMP")).OrderByDescending(p => p.ID);
+                    int k = 0; // chorus index
+                    if (list1.Any())
+                    {
+                        int.TryParse(list1.FirstOrDefault().ID.Substring(1), out k); // Get the chorus number
+                    }
+                    k++; // k is now the next available chorus number
+                    foreach (var chorus in unassignedChoruses)
                     {
                         try
                         {
-                            if (String.IsNullOrWhiteSpace(RawParagraphs[i]))
-                            {
-                                //Do nothing
-                            }
-                            else if (Regex.IsMatch(RawParagraphs[i], @"^\d+. ")) // if the paragraph starts with a number, then a dot, then a space...
-                            {
-                                //...then this is a verse.
-                                //Get the verse number:
-                                int versenum = 9; // default in case of an error
-                                int indexOfFirstSpace = RawParagraphs[i].IndexOf(' ');
-                                int.TryParse(RawParagraphs[i].Substring(0, indexOfFirstSpace - 1), out versenum);
+                            // Get the old and new IDs
+                            string oldID = chorus.ID;
+                            string newID = "c" + k;
 
-                                Paragraph p = new Paragraph();
-                                p.Type = ParagraphType.v;
-                                p.Text = RawParagraphs[i].Substring(indexOfFirstSpace + 1);
-                                if (!String.IsNullOrWhiteSpace(p.Text)) // Ignore if empty
-                                {
-                                    p.Number = versenum;
-                                    p.ID = "v" + versenum;
-
-                                    //Only add if this to the verse list is the first occurrence
-                                    if (!OutputParagraphs.Any(v => v.Text.Equals(p.Text, StringComparison.Ordinal)))
-                                    {
-                                        OutputParagraphs.Add(p);
-                                    }
-
-                                    //Either way, update the verse order
-                                    VerseOrder += p.ID + " ";
-                                }
-                            }
-                            else if (RawParagraphs[i].StartsWith("Words/Music: ")
-                                || RawParagraphs[i].StartsWith("(c)")
-                                || RawParagraphs[i].StartsWith("(Alternatiewe harmonisasie")
-                                || RawParagraphs[i].StartsWith("(alternatiewe harmonisasie")
-                                || RawParagraphs[i].StartsWith("(Harmonisasie")
-                                || RawParagraphs[i].StartsWith("(harmonisasie"))
-                            {
-                                //If the paragraph contains additional info, first split it into lines and process each of them:
-                                string[] lines = RawParagraphs[i].Split('\n');
-                                foreach (string line in lines)
-                                {
-                                    if (line.StartsWith("Words/Music: "))
-                                    {
-                                        Authors = line.Substring(line.IndexOf(": ") + 2).Split(new[] { ", " }, StringSplitOptions.None);
-                                    }
-                                    else if (line.StartsWith("(c)"))
-                                    {
-                                        Copyright = line.Trim();
-                                    }
-                                    else// if (line.StartsWith("(Alternatiewe harmonisasie") || line.StartsWith("(alternatiewe harmonisasie"))
-                                    {
-                                        // Add this as as Other verse
-                                        Paragraph Other1 = new Paragraph();
-                                        Other1.ID = "o1";
-                                        Other1.Text = line;
-                                        OutputParagraphs.Add(Other1);
-                                        // ...but don't add it to the verseOrder. Thus, this isn't displayed by default.
-                                    }
-                                }
-                            }
-                            else
-                            {
-                                //Either chorus or bridge.
-
-                                //First, assume new Chorus:
-                                Paragraph p = new Paragraph();
-                                p.Type = ParagraphType.c;
-                                p.Text = RawParagraphs[i];
-
-                                if (!String.IsNullOrWhiteSpace(p.Text)) // Ignore if empty
-                                {
-                                    string searchText = p.Text.Replace("\n", " "); // the text to search for doesn't have newlines
-                                    XElement foundVerse = SongData.Elements("SongVerses").Where(sv => sv.Element("PartText").Value == searchText).FirstOrDefault();
-                                    if (foundVerse == null)
-                                    {
-                                        //Use/create the simplified version of SongData
-                                        if (SongDataSimplified == null)
-                                        {
-                                            SongDataSimplified = new XElement(SongData); // deep copy!
-                                            foreach (var verse in SongDataSimplified.Elements("SongVerses"))
-                                            {
-                                                string newText = verse.Element("PartText").Value.Trim().ToLowerInvariant(); // Convert to lowercase and trim
-                                                newText = Regex.Replace(newText, @"\s+", " "); // Replace multiple spaces with just one
-                                                verse.Element("PartText").SetValue(newText);
-                                            }
-                                        }
-                                        searchText = searchText.Trim().ToLowerInvariant(); // Convert to lowercase and trim
-                                        searchText = Regex.Replace(searchText, @"\s+", " "); // Replace multiple spaces with just one
-                                        
-                                        var foundVerseList = SongDataSimplified.Elements("SongVerses").Where(sv => sv.Element("PartText").Value == searchText);
-                                        if (foundVerseList.Count() == 1)
-                                            foundVerse = foundVerseList.FirstOrDefault();
-                                        else if (foundVerseList.Count() > 0)
-                                        {
-                                            Console.WriteLine("Multiple possible verses for song found");
-                                            foundVerse = foundVerseList.FirstOrDefault();
-                                        }
-                                        else
-                                        {
-                                            Console.WriteLine(">> Verse type not found, assuming chorus: " + p.Text);
-
-                                            // Add as new paragraph as chorus and update the verse order
-                                            OutputParagraphs.Add(p);
-                                            VerseOrder += p.ID + " ";
-                                        }
-                                    }
-
-                                    if (foundVerse != null)
-                                    {
-                                        // Get verse type:
-                                        switch (foundVerse.Element("PartID").Value)
-                                        {
-                                            /*
-                                             * 0: Intro 
-                                             * 1: Verse
-                                             * 2: Bridge
-                                             * 3: Chorus
-                                             * 4: Ending
-                                             * 
-                                             * (5: Page)
-                                             * (6: Slide)
-                                             * */
-                                            case "0":
-                                                p.Type = ParagraphType.i;
-                                                p.ID = "i";
-                                                break;
-
-                                            case "1":
-                                                p.Type = ParagraphType.v;
-                                                p.ID = "v";
-                                                break;
-
-                                            case "2":
-                                                p.Type = ParagraphType.b;
-                                                p.ID = "b";
-                                                break;
-
-                                            default:
-                                            case "3":
-                                                p.Type = ParagraphType.c;
-                                                p.ID = "c";
-                                                break;
-
-                                            case "4":
-                                                p.Type = ParagraphType.e;
-                                                p.ID = "e";
-                                                break;
-                                        }
-                                        // Get verse number:
-                                        p.Number = Int16.Parse(foundVerse.Element("PartNumber").Value);
-                                        p.ID += p.Number;
-                                    
-                                        //First, check if this is a re-occurring paragraph:
-                                        Paragraph existingParagraph = OutputParagraphs.SingleOrDefault(o => o.Text.Equals(p.Text, StringComparison.Ordinal));
-                                        if (existingParagraph != null)
-                                        {
-                                            // Existing paragraph, get its ID and update the verse order
-                                            //existingParagraph.ID = SongVerses.Parent.Elements("SongVerses").Where(sv => sv.Element(""))
-                                            VerseOrder += existingParagraph.ID + " ";
-                                        }
-                                        else
-                                        {
-                                            // Add as new paragraph and update the verse order
-                                            OutputParagraphs.Add(p);
-                                            VerseOrder += p.ID + " ";
-                                        }
-                                    } // if (not empty)
-                                } // if (found)
-                                else
-                                {
-                                    if (!String.IsNullOrWhiteSpace(p.Text))
-                                        Console.WriteLine(">>Couldn't find verse in song \""+Title+"\" ("+ID+"):\n"+p.Text);
-                                }
-                            } // if (not verse)
+                            // Replace old IDs with the new ones
+                            VerseOrder = VerseOrder.Replace(oldID, newID);
+                            chorus.ID = newID;
+                            //OutputParagraphs.Where(p => p.ID == oldID).Single().ID = newID; // already changed - the same Paragraph object is referenced
                         }
-                        catch (Exception e)
+                        catch (Exception e1)
                         {
-                            Console.WriteLine("Exception caught: "+e.ToString());
-                            throw e;
+                            Console.WriteLine("Error in chorus assignment - song might be wrong!");
                         }
-                    } // paragraph-for
+                    }
+                }
+
+                //Remove any empty outputParagraphs
+                //Find empty items
+                try
+                {
+                    var EmptyParagraphs = OutputParagraphs.Where(p => String.IsNullOrWhiteSpace(p.Text)).ToList();
+                    foreach (Paragraph p in EmptyParagraphs)
+                    {
+                        // Remove the paragraph from the verse order
+                        VerseOrder = VerseOrder.Replace(p.ID, "");
+
+                        // Remove this paragraph from OutputParagraphs
+                        OutputParagraphs.Remove(p);
+                    }
+                }
+                catch (Exception e2)
+                {
+                    Console.WriteLine("Error removing empty paragraph: " + e2.ToString());
+                }
             }
 
             public void ParseFromLyrix(string sourcetext)

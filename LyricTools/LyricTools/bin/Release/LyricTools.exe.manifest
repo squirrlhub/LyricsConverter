@@ -42,14 +42,14 @@
     </dependentAssembly>
   </dependency>
   <dependency>
-    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="LyricTools.exe" size="27064">
+    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="LyricTools.exe" size="28600">
       <assemblyIdentity name="LyricTools" version="1.0.0.0" language="neutral" processorArchitecture="msil" />
       <hash>
         <dsig:Transforms>
           <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
         </dsig:Transforms>
         <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
-        <dsig:DigestValue>xlY0pZEL23xxe17YNReBRrZFoAbZoZFpxpbxFdQbxH0=</dsig:DigestValue>
+        <dsig:DigestValue>gOThfT6T0KqfMY0e3uVrH+hjUK7crKLJ5VXMBNACt2s=</dsig:DigestValue>
       </hash>
     </dependentAssembly>
   </dependency>
